@@ -1,51 +1,48 @@
 # 💬 Chat Realtime
 
 [![CI](https://github.com/robertofilho0/chat-realtime/actions/workflows/ci.yml/badge.svg)](https://github.com/robertofilho0/chat-realtime/actions/workflows/ci.yml)
-![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)
+![NestJS](https://img.shields.io/badge/nestjs-12-E0234E?logo=nestjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/typescript-6-3178C6?logo=typescript&logoColor=white)
 ![Socket.IO](https://img.shields.io/badge/socket.io-4-010101?logo=socket.io)
-![MongoDB](https://img.shields.io/badge/mongodb-7-47A248?logo=mongodb&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/postgresql-17-4169E1?logo=postgresql&logoColor=white)
+![Prisma](https://img.shields.io/badge/prisma-7-2D3748?logo=prisma&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Chat em tempo real com **Socket.IO autenticado por JWT**, salas, presença online, indicador de digitação, anti-flood e histórico paginado no MongoDB. Inclui um **cliente web** leve (HTML, CSS e JS puros) servido pelo próprio backend.
+Chat em tempo real com **NestJS WebSocket Gateway (Socket.IO) autenticado por JWT**, salas, presença online, indicador de digitação, anti-flood e histórico paginado no **PostgreSQL/Prisma**. Inclui um **cliente web** leve (HTML, CSS e JS) servido pelo próprio backend.
 
 ## ✨ Funcionalidades
 
-- **Autenticação no handshake do socket**: o usuário vem do token, então ninguém consegue enviar mensagens se passando por outra pessoa
-- **Salas**: criação via API, entrada e saída em tempo real, lista de quem está em cada sala
-- **Presença online** que considera várias abas do mesmo usuário (só fica offline ao fechar a última)
-- **Indicador de "digitando…"** por sala
-- **Anti-flood**: limite de mensagens por conexão, configurável
-- **Acks** em todos os eventos, com erros claros (`{ ok: false, error }`)
+- **Autenticação no handshake do socket**: o autor de cada mensagem vem do token, então ninguém consegue se passar por outra pessoa
+- **Salas** criadas via API, com entrada e saída em tempo real e lista de quem está em cada uma
+- **Presença online multi-aba**: o usuário só fica offline ao fechar a última conexão
+- **"Digitando…"** por sala e **anti-flood** configurável por conexão
+- **Acks** em todos os eventos (`{ ok, … }` ou `{ ok: false, error }`)
 - **Histórico paginado por cursor** (`?before=<id>`), eficiente mesmo com muitas mensagens
-- Validação com **Zod**, senhas com bcrypt, **Helmet**, **CORS**, **rate limiting** e health check
-- **Swagger** em `/docs`, com a documentação dos eventos do socket
-- **Testes** de REST e de **Socket.IO de ponta a ponta** (clientes reais conectando ao servidor)
-- **Docker Compose** (API + MongoDB) e **CI** no GitHub Actions
+- Guards do Nest aplicados só ao HTTP (o WebSocket tem autenticação e rate limit próprios)
+- Validação com **Zod** (nativa no Nest 12), Swagger, Helmet, CORS e health check
+- **Testes e2e com clientes Socket.IO reais** conectando ao servidor e PostgreSQL de verdade
 
 ## 🧱 Stack
 
-Node.js 22+ (ESM) · Express 5 · Socket.IO 4 · MongoDB / Mongoose · JWT · Zod · Jest · Supertest · Docker
+NestJS 12 · TypeScript · `@nestjs/websockets` + Socket.IO 4 · PostgreSQL 17 · Prisma 7 · JWT · Zod · Vitest · Supertest · Docker
 
 ## 📁 Estrutura
 
 ```
-chat-realtime/
-├── docker-compose.yml
-└── backend/
-    ├── public/                 # cliente web (index.html, app.js, style.css)
-    ├── src/
-    │   ├── app.js / server.js
-    │   ├── realtime/
-    │   │   ├── socket.js       # autenticação, salas, mensagens, digitação e anti-flood
-    │   │   └── presence.js     # controle de presença (multi-aba)
-    │   ├── controllers/ routes/ models/ validators/ middlewares/
-    │   └── docs/openapi.json
-    └── tests/                  # REST, Socket.IO e presença
+public/                     # cliente web (index.html, app.js, style.css)
+src/
+├── auth/                   # cadastro, login, me e guard global de JWT (HTTP)
+├── chat/
+│   ├── chat.gateway.ts     # autenticação do handshake, salas, mensagens, digitação e anti-flood
+│   └── presence.service.ts # presença multi-aba
+├── rooms/                  # API de salas e histórico
+├── common/                 # validação, filtros e throttler só para HTTP
+├── prisma/ config/ health/
+prisma/schema.prisma + migrations/
+test/                       # e2e com Socket.IO e PostgreSQL
 ```
 
 ## 🚀 Como rodar
-
-### Com Docker
 
 ```bash
 git clone https://github.com/robertofilho0/chat-realtime.git
@@ -53,27 +50,20 @@ cd chat-realtime
 docker compose up --build
 ```
 
-Abra `http://localhost:5000`, crie uma conta e converse. Abra outra janela anônima com outro usuário para ver o tempo real funcionando. As salas `geral` e `dev` são criadas automaticamente.
+Abra `http://localhost:5000`, crie uma conta e converse. Para ver o tempo real, abra uma janela anônima com outro usuário. As salas `geral` e `dev` são criadas automaticamente. O Swagger fica em `http://localhost:5000/docs`.
 
-### Localmente
-
-```bash
-cd backend
-npm install
-cp .env.example .env   # defina MONGO_URI e JWT_SECRET
-npm run dev
-```
+Localmente: `npm install`, `cp .env.example .env`, `npx prisma migrate deploy` e `npm run start:dev`.
 
 ## 📚 API REST
 
-| Método | Rota                        | Auth   | Descrição                             |
-| ------ | --------------------------- | ------ | ------------------------------------- |
-| `POST` | `/api/auth/register`        | —      | Cadastro                              |
-| `POST` | `/api/auth/login`           | —      | Login                                 |
-| `GET`  | `/api/auth/me`              | Bearer | Usuário autenticado                   |
-| `GET`  | `/api/rooms`                | Bearer | Salas com total de mensagens e online |
-| `POST` | `/api/rooms`                | Bearer | Cria sala                             |
-| `GET`  | `/api/rooms/:slug/messages` | Bearer | Histórico (`?before=<id>&limit=30`)   |
+| Método | Rota                          | Auth   | Descrição                             |
+| ------ | ----------------------------- | ------ | ------------------------------------- |
+| `POST` | `/api/auth/register`          | —      | Cadastro                              |
+| `POST` | `/api/auth/login`             | —      | Login                                 |
+| `GET`  | `/api/auth/me`                | Bearer | Usuário autenticado                   |
+| `GET`  | `/api/rooms`                  | Bearer | Salas com total de mensagens e online |
+| `POST` | `/api/rooms`                  | Bearer | Cria sala                             |
+| `GET`  | `/api/rooms/:slug/messages`   | Bearer | Histórico (`?before=<id>&limit=30`)   |
 
 ## ⚡ Eventos Socket.IO
 
@@ -94,16 +84,15 @@ socket.on('message:new', (msg) => console.log(`${msg.username}: ${msg.content}`)
 | cliente → servidor | `typing`                       | `{ room, typing }`            |
 | servidor → cliente | `message:new`                  | mensagem salva                |
 | servidor → cliente | `room:users`                   | `{ room, users }`             |
-| servidor → cliente | `presence:list`                | lista de usuários online      |
+| servidor → cliente | `presence:list`                | usuários online               |
 | servidor → cliente | `user:online` / `user:offline` | username                      |
 | servidor → cliente | `typing`                       | `{ room, username, typing }`  |
 
 ## 🧪 Testes
 
 ```bash
-cd backend
-npm test               # sobe um MongoDB em memória e clientes Socket.IO reais
-npm run test:coverage
+npm test             # unitários
+npm run test:e2e     # e2e com clientes Socket.IO reais (requer DATABASE_URL)
 npm run lint
 ```
 

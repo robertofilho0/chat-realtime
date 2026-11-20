@@ -1,0 +1,49 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  username     String    @unique @db.VarChar(20)
+  displayName  String?   @map("display_name") @db.VarChar(40)
+  passwordHash String    @map("password_hash")
+  lastSeenAt   DateTime? @map("last_seen_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  messages     Message[]
+  rooms        Room[]
+
+  @@map("users")
+}
+
+model Room {
+  id          String    @id @default(uuid()) @db.Uuid
+  slug        String    @unique @db.VarChar(30)
+  name        String    @db.VarChar(40)
+  description String?   @db.VarChar(200)
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  messages    Message[]
+
+  @@map("rooms")
+}
+
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @map("room_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now()) @map("created_at")
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@map("messages")
+}
