@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Realtime</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <section id="auth" class="auth">
+      <form id="auth-form" class="card">
+        <h1>💬 Chat Realtime</h1>
+        <p class="muted">Entre ou crie uma conta para conversar.</p>
+        <label
+          >Username <input name="username" autocomplete="username" required minlength="3"
+        /></label>
+        <label
+          >Senha
+          <input
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            minlength="8"
+        /></label>
+        <p id="auth-error" class="error" role="alert"></p>
+        <div class="row">
+          <button type="submit" data-action="login">Entrar</button>
+          <button type="submit" data-action="register" class="secondary">Criar conta</button>
+        </div>
+      </form>
+    </section>
+
+    <main id="chat" class="chat" hidden>
+      <aside class="sidebar">
+        <header>
+          <strong id="me"></strong>
+          <button id="logout" class="link">Sair</button>
+        </header>
+        <h2>Salas</h2>
+        <ul id="rooms" class="list"></ul>
+        <form id="new-room" class="inline">
+          <input name="name" placeholder="Nova sala" maxlength="30" required />
+          <button type="submit" title="Criar sala">+</button>
+        </form>
+        <h2>Na sala <span id="room-count" class="badge">0</span></h2>
+        <ul id="room-users" class="list small"></ul>
+        <h2>Online <span id="online-count" class="badge">0</span></h2>
+        <ul id="online" class="list small"></ul>
+      </aside>
+
+      <section class="conversation">
+        <header><h2 id="room-title">#geral</h2></header>
+        <div id="messages" class="messages" aria-live="polite">
+          <button id="load-more" class="link" hidden>Carregar mensagens anteriores</button>
+        </div>
+        <p id="typing" class="typing"></p>
+        <form id="composer" class="composer">
+          <input
+            name="content"
+            placeholder="Escreva uma mensagem…"
+            maxlength="2000"
+            autocomplete="off"
+          />
+          <button type="submit">Enviar</button>
+        </form>
+        <p id="chat-error" class="error" role="alert"></p>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
