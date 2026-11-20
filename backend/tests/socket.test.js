@@ -31,8 +31,9 @@ describe('Conexão', () => {
 
     const online = once(a, 'user:online');
     const b = srv.connect(bruno.token);
+    const listaDoBruno = once(b, 'presence:list');
     expect(await online).toBe('bruno');
-    expect(await once(b, 'presence:list')).toEqual(['ana', 'bruno']);
+    expect(await listaDoBruno).toEqual(['ana', 'bruno']);
   });
 
   it('avisa quando o usuário fica offline (considerando várias abas)', async () => {
